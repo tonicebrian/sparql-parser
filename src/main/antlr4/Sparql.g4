@@ -19,7 +19,7 @@ selectQuery: selectClause datasetClause* whereClause solutionModifier;
 
 subSelect: selectClause whereClause solutionModifier valuesClause;
 
-selectClause: 'SELECT' ('DISTINCT' | 'REDUCED')? ((var | ('(' expression 'AS' var ')')+)*);
+selectClause: 'SELECT' ('DISTINCT' | 'REDUCED')? ((var | ('(' expression 'AS' var ')'))+ | '*');
 
 constructQuery: 'CONSTRUCT' (constructTemplate datasetClause* whereClause solutionModifier | datasetClause* 'WHERE' '{' triplesTemplate? '}' solutionModifier);
 
@@ -65,7 +65,8 @@ update: prologue (update1 (';' update)? )?;
 
 update1: load | clear | drop | add | move | copy | create | insertData | deleteData | deleteWhere | modify ;
 
-load: 'LOAD' 'SILENT'? iri ('INTO' graphRef);
+load: 'LOAD' 'SILENT'? iri ('INTO' graphRef)?
+;
 
 clear: 'CLEAR' 'SILENT'? graphRefAll;
 
@@ -188,7 +189,7 @@ propertyList: propertyListNotEmpty?
 propertyListNotEmpty: verb objectList (';' (verb objectList)?)*
 ;
 
-verb: varOrIri | 'a'
+verb: varOrIri | 'a' | 'A'
 ;
 
 objectList: object (',' object)*
@@ -236,13 +237,13 @@ pathEltOrInverse:  pathElt | '^' pathElt
 pathMod:  '?' | '*' | '+'
 ;
 
-pathPrimary:  iri | 'a' | '!' pathNegatedPropertySet | '(' path ')'
+pathPrimary:  iri | 'a' | 'A' | '!' pathNegatedPropertySet | '(' path ')'
 ;
 
 pathNegatedPropertySet:  pathOneInPropertySet | '(' ( pathOneInPropertySet ( '|' pathOneInPropertySet )* )? ')'
 ;
 
-pathOneInPropertySet:  iri | 'a' | '^' ( iri | 'a' )
+pathOneInPropertySet:  iri | 'a' | 'A' | '^' ( iri | 'a' )
 ;
 
 triplesNode:  collection | blankNodePropertyList
@@ -363,12 +364,12 @@ builtInCall:    aggregate
 | 'IF' '(' expression ',' expression ',' expression ')'
 | 'STRLANG' '(' expression ',' expression ')'
 | 'STRDT' '(' expression ',' expression ')'
-| 'sameTerm' '(' expression ',' expression ')'
-| 'isIRI' '(' expression ')'
-| 'isURI' '(' expression ')'
-| 'isBLANK' '(' expression ')'
-| 'isLITERAL' '(' expression ')'
-| 'isNUMERIC' '(' expression ')'
+| 'SAMETERM' '(' expression ',' expression ')'
+| 'ISIRI' '(' expression ')'
+| 'ISURI' '(' expression ')'
+| 'ISBLANK' '(' expression ')'
+| 'ISLITERAL' '(' expression ')'
+| 'ISNUMERIC' '(' expression ')'
 | regexExpression
 | existsFunc
 | notExistsFunc
@@ -501,7 +502,10 @@ ECHAR:  '\\' ('t' | 'b' | 'n' | 'r' | 'f' | '"' | '\'')
 NIL:  '(' WS* ')'
 ;
 
-WS:  (' ' | '\t' | '\r' | '\n')+ -> skip
+WS:  (COMMENT | (' ' | '\t' | '\r' | '\n')+) -> skip
+;
+
+COMMENT: '#' ~('\u000A' | '\u000D')* ('\u000A' | '\u000D')
 ;
 
 ANON:  '[' WS* ']'
