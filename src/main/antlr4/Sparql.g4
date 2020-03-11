@@ -189,7 +189,10 @@ propertyList: propertyListNotEmpty?
 propertyListNotEmpty: verb objectList (';' (verb objectList)?)*
 ;
 
-verb: varOrIri | 'a' | 'A'
+verb:
+   varOrIri
+   | 'a'
+   | 'A'  // See note at the beginning of the grammar
 ;
 
 objectList: object (',' object)*
@@ -237,13 +240,25 @@ pathEltOrInverse:  pathElt | '^' pathElt
 pathMod:  '?' | '*' | '+'
 ;
 
-pathPrimary:  iri | 'a' | 'A' | '!' pathNegatedPropertySet | '(' path ')'
+pathPrimary:
+  iri
+  | 'a'
+  | 'A'  // See note at the beginning of the grammar
+  | '!' pathNegatedPropertySet
+  | '(' path ')'
 ;
 
 pathNegatedPropertySet:  pathOneInPropertySet | '(' ( pathOneInPropertySet ( '|' pathOneInPropertySet )* )? ')'
 ;
 
-pathOneInPropertySet:  iri | 'a' | 'A' | '^' ( iri | 'a' )
+pathOneInPropertySet:  iri
+| 'a'
+| 'A'   // See note at the beginning of the grammar
+| '^' (
+     iri
+     | 'a'
+     | 'A' // See note at the beginning of the grammar
+     )
 ;
 
 triplesNode:  collection | blankNodePropertyList
@@ -417,7 +432,11 @@ numericLiteralPositive:  INTEGER_POSITIVE | DECIMAL_POSITIVE | DOUBLE_POSITIVE
 numericLiteralNegative:  INTEGER_NEGATIVE | DECIMAL_NEGATIVE | DOUBLE_NEGATIVE
 ;
 
-booleanLiteral:  'true' | 'false'
+booleanLiteral:
+ 'true'
+ | 'false'
+ | 'TRUE'     // See Note at the beginning of the grammar
+ | 'FALSE'    // See Note at the beginning of the grammar
 ;
 
 string:  STRING_LITERAL1 | STRING_LITERAL2 | STRING_LITERAL_LONG1 | STRING_LITERAL_LONG2
@@ -551,6 +570,6 @@ PERCENT:  '%' HEX HEX
 HEX:  [0-9] | [A-F] | [a-f]
 ;
 
-PN_LOCAL_ESC:  '\\' ( '_' | '~' | '.' | '-' | '!' | '$' | '&' | '\'' | '(' | ')' | '*' | '+' | ',' | ';' | '=' | '/' | '?' | '#' | '@' | '%' )
+PN_LOCAL_ESC:  '\\' ( ':' | '_' | '~' | '.' | '-' | '!' | '$' | '&' | '\'' | '(' | ')' | '*' | '+' | ',' | ';' | '=' | '/' | '?' | '#' | '@' | '%' )
 ;
 
