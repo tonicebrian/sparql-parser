@@ -52,6 +52,10 @@ class SparqlParserSpec extends FlatSpec with Matchers with TryValues {
         .map(_.stringValue())
     }
     // From all manifests extract all files that are about validating syntax
+    val POSITIVE_SYNTAX_TEST_IRI =
+      "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#PositiveSyntaxTest11"
+    val NEGATIVE_SYNTAX_TEST_IRI =
+      "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#NegativeSyntaxTest11"
     val parsedSparqlFiles = manifests
       .flatMap { manifest =>
         val uri = new URI(manifest)
@@ -60,30 +64,45 @@ class SparqlParserSpec extends FlatSpec with Matchers with TryValues {
           s"file://${Paths.get(uri).toAbsolutePath.toString}",
           RDFFormat.TRIG
         )
-        val positiveSyntaxClass = vf.createIRI(
-          "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#PositiveSyntaxTest11"
-        )
-        model
-          .filter(null, RDF.TYPE, positiveSyntaxClass)
-          .subjects()
-          .asScala
-          .flatMap(
-            testIRI =>
-              Models
-                .getPropertyString(
-                  model,
-                  testIRI,
-                  vf.createIRI(BASE_MF, "action")
-                )
-                .toScala
-          )
+        List(POSITIVE_SYNTAX_TEST_IRI, NEGATIVE_SYNTAX_TEST_IRI).map {
+          iriClass =>
+            val syntaxTestClass = vf.createIRI(iriClass)
+            val sparqlFiles = model
+              .filter(null, RDF.TYPE, syntaxTestClass)
+              .subjects()
+              .asScala
+              .flatMap(
+                testIRI =>
+                  Models
+                    .getPropertyString(
+                      model,
+                      testIRI,
+                      vf.createIRI(BASE_MF, "action")
+                    )
+                    .toScala
+              )
+            (iriClass, sparqlFiles)
+        }
       }
-      .map { uri =>
-        val fileName = Paths.get(new URI(uri)).toAbsolutePath.toString
-        parseSparql(fileName)
+      .groupBy(_._1)
+      .view
+      .mapValues { value =>
+        val uris = value.flatMap(_._2)
+        println("###")
+        println(uris)
+        uris.map { uri =>
+          val fileName = Paths.get(new URI(uri)).toAbsolutePath.toString
+          parseSparql(fileName)
+        }
       }
+      .toMap
 
-    all(parsedSparqlFiles) should be a Symbol("success")
+    all(parsedSparqlFiles(POSITIVE_SYNTAX_TEST_IRI)) should be a Symbol(
+      "success"
+    )
+    all(parsedSparqlFiles(NEGATIVE_SYNTAX_TEST_IRI)) should be a Symbol(
+      "failure"
+    )
   }
 
   private def parseSparql(

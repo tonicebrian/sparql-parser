@@ -1,5 +1,7 @@
 grammar Sparql;
 
+@parser::members {public static boolean allowsBlankNodes = true;}
+
 statement: query | update
 ;
 
@@ -80,15 +82,37 @@ move: 'MOVE' 'SILENT'? graphOrDefault 'TO' graphOrDefault;
 
 copy: 'COPY' 'SILENT'? graphOrDefault 'TO' graphOrDefault;
 
-insertData: 'INSERT DATA' quadData;
+insertData
+: 'INSERT DATA' quadData;
 
-deleteData: 'DELETE DATA' quadData;
+deleteData
+@init {
+allowsBlankNodes = false;
+}
+@after {
+allowsBlankNodes = true;
+}
+: 'DELETE DATA' quadData;
 
-deleteWhere: 'DELETE WHERE' quadPattern;
+deleteWhere
+@init {
+allowsBlankNodes = false;
+}
+@after {
+allowsBlankNodes = true;
+}
+: 'DELETE WHERE' quadPattern;
 
 modify: ('WITH' iri)? (deleteClause insertClause?| insertClause) usingClause* 'WHERE' groupGraphPattern;
 
-deleteClause: 'DELETE' quadPattern;
+deleteClause
+@init {
+allowsBlankNodes = false;
+}
+@after {
+allowsBlankNodes = true;
+}
+: 'DELETE' quadPattern;
 
 insertClause: 'INSERT' quadPattern;
 
@@ -294,7 +318,7 @@ varOrIri:  var | iri
 var:  VAR1 | VAR2
 ;
 
-graphTerm:  iri | rdfLiteral | numericLiteral | booleanLiteral | blankNode | NIL
+graphTerm:  iri | rdfLiteral | numericLiteral | booleanLiteral | {allowsBlankNodes}? blankNode | NIL
 ;
 
 expression:  conditionalOrExpression
