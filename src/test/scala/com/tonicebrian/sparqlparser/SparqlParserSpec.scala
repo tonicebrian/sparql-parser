@@ -19,7 +19,11 @@ import scala.util.{Failure, Try}
 
 class SparqlParserSpec extends FlatSpec with Matchers with TryValues {
 
-  "All files tagged as " should "be parsed correctly" in {
+  private val POSITIVE_SYNTAX_TEST_IRI =
+    "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#PositiveSyntaxTest11"
+  private val NEGATIVE_SYNTAX_TEST_IRI =
+    "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#NegativeSyntaxTest11"
+  private val parsedSparqlFiles = {
     val SUITE_FOLDER = "src/test/resources/sparql11-test-suite/"
     val bufferedReader = io.Source
       .fromFile(s"${SUITE_FOLDER}manifest-all.ttl")
@@ -52,11 +56,7 @@ class SparqlParserSpec extends FlatSpec with Matchers with TryValues {
         .map(_.stringValue())
     }
     // From all manifests extract all files that are about validating syntax
-    val POSITIVE_SYNTAX_TEST_IRI =
-      "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#PositiveSyntaxTest11"
-    val NEGATIVE_SYNTAX_TEST_IRI =
-      "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#NegativeSyntaxTest11"
-    val parsedSparqlFiles = manifests
+    manifests
       .flatMap { manifest =>
         val uri = new URI(manifest)
         val model = Rio.parse(
@@ -64,28 +64,24 @@ class SparqlParserSpec extends FlatSpec with Matchers with TryValues {
           s"file://${Paths.get(uri).toAbsolutePath.toString}",
           RDFFormat.TRIG
         )
-        List(
-          POSITIVE_SYNTAX_TEST_IRI
-          // Commenting out Negative Syntax tests since some of them are not related to Syntaxis but Semantics
-          // like aggregates/agg12.rq where you need to check which variables are used where
-          // , NEGATIVE_SYNTAX_TEST_IRI
-        ).map { iriClass =>
-          val syntaxTestClass = vf.createIRI(iriClass)
-          val sparqlFiles = model
-            .filter(null, RDF.TYPE, syntaxTestClass)
-            .subjects()
-            .asScala
-            .flatMap(
-              testIRI =>
-                Models
-                  .getPropertyString(
-                    model,
-                    testIRI,
-                    vf.createIRI(BASE_MF, "action")
-                  )
-                  .toScala
-            )
-          (iriClass, sparqlFiles)
+        List(POSITIVE_SYNTAX_TEST_IRI, NEGATIVE_SYNTAX_TEST_IRI).map {
+          iriClass =>
+            val syntaxTestClass = vf.createIRI(iriClass)
+            val sparqlFiles = model
+              .filter(null, RDF.TYPE, syntaxTestClass)
+              .subjects()
+              .asScala
+              .flatMap(
+                testIRI =>
+                  Models
+                    .getPropertyString(
+                      model,
+                      testIRI,
+                      vf.createIRI(BASE_MF, "action")
+                    )
+                    .toScala
+              )
+            (iriClass, sparqlFiles)
         }
       }
       .groupBy(_._1)
@@ -98,14 +94,6 @@ class SparqlParserSpec extends FlatSpec with Matchers with TryValues {
         }
       }
       .toMap
-
-    all(parsedSparqlFiles(POSITIVE_SYNTAX_TEST_IRI)) should be a Symbol(
-      "success"
-    )
-    // See comment above
-    // all(parsedSparqlFiles(NEGATIVE_SYNTAX_TEST_IRI)) should be a Symbol(
-    //   "failure"
-    // )
   }
 
   private def parseSparql(
@@ -150,5 +138,15 @@ class SparqlParserSpec extends FlatSpec with Matchers with TryValues {
         )
     }
   }
-
+  "The Sparql parser" should "parse query files tagged with mf:PositiveSyntaxTest11 as valid SPARQL queries" in {
+    all(parsedSparqlFiles(POSITIVE_SYNTAX_TEST_IRI)) should be a Symbol(
+      "success"
+    )
+  }
+  it should "flag query files tagged as mf:NegativeSyntaxTest11 as unparseable SPARQL" in {
+    pending
+    all(parsedSparqlFiles(NEGATIVE_SYNTAX_TEST_IRI)) should be a Symbol(
+      "failure"
+    )
+  }
 }
